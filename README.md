@@ -63,3 +63,15 @@ npm run test:e2e -- auth-plans-api.spec.ts
 ```
 
 Estas pruebas crean datos ficticios temporales y los retiran; usar una base de desarrollo. La suite completa de navegador requiere Chromium de Playwright y un entorno que permita ejecutarlo. Las pruebas respetan el límite de intentos de Better Auth. No ejecutarlas mientras se inicializan las cuentas reales.
+
+## Revisión de cambios en Codex
+
+El estado actual del proyecto tiene una base guardada en Git local. Los próximos cambios se dejan sin confirmar para poder compararlos y revisarlos antes de incorporarlos al historial.
+
+En el panel de revisión, seleccionar los cambios sin confirmar (Unstaged) o los del último turno (Last turn). Abrir el archivo, situar el cursor sobre una línea del diff y usar el botón + para escribir una corrección. Después enviar al chat una indicación como «Aplica mis comentarios».
+
+Durante el desarrollo se abrirá el panel de revisión al terminar cada conjunto de cambios. No se crearán nuevos commits automáticamente antes de que el usuario pueda revisar esos cambios.
+
+Perfecto probando
+
+Documentación oficial: https://learn.chatgpt.com/docs/code-review?surface=app
