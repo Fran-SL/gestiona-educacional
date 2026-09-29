@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPERUSUARIO
+  ADMINISTRADOR
+}
+
+enum PlanStatus {
+  ABIERTO
+  CERRADO
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(ADMINISTRADOR)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  plans         Plan[]
+  comments      MilestoneComment[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([identifier])
+  @@map("verifications")
+}
+
+model Plan {
+  id          String     @id @default(cuid())
+  name        String
+  description String     @default("")
+  startDate   DateTime?   @db.Date
+  endDate     DateTime?   @db.Date
+  status      PlanStatus @default(ABIERTO)
+  createdById String
+  createdBy   User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  dimensions  Dimension[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  @@index([createdById])
+  @@map("plans")
+}
+
+model Dimension {
+  id          String       @id @default(cuid())
+  planId      String
+  plan        Plan         @relation(fields: [planId], references: [id], onDelete: Cascade)
+  name        String
+  description String       @default("")
+  position    Int          @default(0)
+  managements Management[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  @@index([planId, position])
+  @@map("dimensions")
+}
+
+model Management {
+  id          String      @id @default(cuid())
+  dimensionId String
+  dimension   Dimension   @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+  name        String
+  description String      @default("")
+  position    Int         @default(0)
+  actions     Action[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  @@index([dimensionId, position])
+  @@map("managements")
+}
+
+model Action {
+  id              String      @id @default(cuid())
+  managementId    String
+  management      Management  @relation(fields: [managementId], references: [id], onDelete: Cascade)
+  name            String
+  description     String
+  responsibleName String
+  startDate       DateTime    @db.Date
+  endDate         DateTime    @db.Date
+  actualExpense   Decimal?    @db.Decimal(18, 2)
+  currency        String     @default("CLP") @db.Char(3)
+  position        Int        @default(0)
+  // Optimistic concurrency token, not a change history.
+  version         Int        @default(0)
+  milestones      Milestone[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  @@index([managementId, position])
+  @@map("actions")
+}
+
+model Milestone {
+  id        String    @id @default(cuid())
+  actionId  String
+  action    Action    @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  name      String
+  // Basis points: 10000 = 100%. Exact arithmetic with two decimal places.
+  weightBps Int
+  progressBps Int     @default(0)
+  position  Int      @default(0)
+  comments  MilestoneComment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([actionId, position])
+  @@map("milestones")
+}
+
+model MilestoneComment {
+  id          String    @id @default(cuid())
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  body        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  @@index([milestoneId, createdAt])
+  @@index([authorId])
+  @@map("milestone_comments")
+}
