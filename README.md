@@ -1,6 +1,6 @@
 # Gestión Educacional
 
-Aplicación MVC para planes configurables: Plan → Dimensión → Gestión → Acción → Hito.
+Aplicación MVC para planes configurables: Plan → Dimensión → Acción → Hito.
 
 ## Requisitos
 
@@ -32,13 +32,13 @@ La generación y validación del esquema no crean una base ni prueban la conexi�
 
 ## Estado
 
-Inicio de sesión y creación/listado de planes conectados a PostgreSQL. Incluye separación MVC, reglas de hitos y pruebas. La edición completa de la jerarquía y las funciones de Excel se implementarán después.
+Inicio de sesión, creación/listado y apertura de planes conectados a PostgreSQL. Cada plan permite crear, editar y eliminar dimensiones, con resumen y confirmación del contenido dependiente antes de borrar. Los planes cerrados siguen admitiendo estos cambios. La estructura incluye acciones e hitos. La capa de datos de revisiones e historial está implementada; su interfaz y operaciones de seguimiento, el Dashboard y las funciones de Excel están pendientes.
 
 Consultar `docs/DECISIONES.md` y `docs/ARQUITECTURA.md`.
 
 ## Base local configurada
 
-La instalación de este computador utiliza PostgreSQL 18 en `127.0.0.1:5432`, base `gestion_educacional` y usuario dedicado `gestion_educacional_app`. La conexión está en `.env`, excluido de Git y con permisos privados. No reemplazar ese archivo siguiendo el ejemplo de preparación si ya existe.
+La instalación de este computador utiliza PostgreSQL 18 en `127.0.0.1:5432`, base `gestion_educacional` y un usuario dedicado configurado en `.env`. La conexión está en `.env`, excluido de Git y con permisos privados. No reemplazar ese archivo siguiendo el ejemplo de preparación si ya existe.
 
 La migración inicial ya fue aplicada. Para comprobar el estado ejecutar `npx prisma migrate status`. El listado y la creación de planes ya utilizan autenticación y persistencia.
 
@@ -59,7 +59,7 @@ El asistente pide nombre, correo y contraseña para superusuario y administrador
 
 ```sh
 npm run build
-npm run test:e2e -- auth-plans-api.spec.ts
+npm run test:e2e -- auth-plans-api.spec.ts plan-structure-api.spec.ts
 ```
 
 Estas pruebas crean datos ficticios temporales y los retiran; usar una base de desarrollo. La suite completa de navegador requiere Chromium de Playwright y un entorno que permita ejecutarlo. Las pruebas respetan el límite de intentos de Better Auth. No ejecutarlas mientras se inicializan las cuentas reales.
@@ -75,3 +75,16 @@ Durante el desarrollo se abrirá el panel de revisión al terminar cada conjunto
 Perfecto probando
 
 Documentación oficial: https://learn.chatgpt.com/docs/code-review?surface=app
+
+## Integridad de revisiones (Etapa 2)
+
+Consultar `docs/SEGUIMIENTO-DATOS.md`. Ejecutar `npm run test:integrity` para verificar restricciones SQL con datos ficticios en un esquema temporal independiente. Requiere PostgreSQL y permiso para crear/eliminar ese esquema de prueba; no escribe datos institucionales. No hay todavía interfaz ni controllers de seguimiento.
+
+## Operaciones de Seguimiento
+
+Implementadas las operaciones de servidor para iniciar, consultar, guardar, corregir, confirmar y finalizar revisiones y consultar su historial. Mantienen el contrato SQL de Etapa 2. Ver `docs/SEGUIMIENTO-SERVIDOR.md` para contratos, concurrencia y comandos de pruebas aisladas. La UI de reunión y el Dashboard siguen pendientes.
+
+
+## Etapa 4: interfaz de Seguimiento
+
+Implementada la vista de reunión por dimensión y acción, guardado explícito, correcciones por rol, protección de borradores, historial y finalización. Ver `docs/SEGUIMIENTO-UI.md` para rutas, comportamiento y pruebas. Dashboard continúa pendiente; no se calculan avances agregados de dimensión ni plan.

@@ -31,6 +31,10 @@ model User {
   accounts      Account[]
   plans         Plan[]
   comments      MilestoneComment[]
+  createdReviews PlanReview[] @relation("ReviewCreator")
+  finalizedReviews PlanReview[] @relation("ReviewFinalizer")
+  reviewedActions ReviewAction[] @relation("ActionReviewer")
+  progressEvents ProgressEvent[] @relation("ProgressActor")
 
   @@map("users")
 }
@@ -90,6 +94,7 @@ model Plan {
   createdById String
   createdBy   User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
   dimensions  Dimension[]
+  reviews     PlanReview[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   @@index([createdById])
@@ -103,31 +108,18 @@ model Dimension {
   name        String
   description String       @default("")
   position    Int          @default(0)
-  managements Management[]
+  weightBps   Int
+  actions     Action[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   @@index([planId, position])
   @@map("dimensions")
 }
 
-model Management {
-  id          String      @id @default(cuid())
-  dimensionId String
-  dimension   Dimension   @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
-  name        String
-  description String      @default("")
-  position    Int         @default(0)
-  actions     Action[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  @@index([dimensionId, position])
-  @@map("managements")
-}
-
 model Action {
   id              String      @id @default(cuid())
-  managementId    String
-  management      Management  @relation(fields: [managementId], references: [id], onDelete: Cascade)
+  dimensionId     String
+  dimension       Dimension   @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
   name            String
   description     String
   responsibleName String
@@ -136,12 +128,13 @@ model Action {
   actualExpense   Decimal?    @db.Decimal(18, 2)
   currency        String     @default("CLP") @db.Char(3)
   position        Int        @default(0)
+  weightBps       Int
   // Optimistic concurrency token, not a change history.
   version         Int        @default(0)
   milestones      Milestone[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
-  @@index([managementId, position])
+  @@index([dimensionId, position])
   @@map("actions")
 }
 
@@ -173,4 +166,132 @@ model MilestoneComment {
   @@index([milestoneId, createdAt])
   @@index([authorId])
   @@map("milestone_comments")
+}
+
+enum ReviewStatus {
+  ABIERTA
+  FINALIZADA
+}
+
+enum ProgressEventType {
+  ACTUALIZACION
+  CORRECCION
+}
+
+model PlanReview {
+  id                 String @id @default(cuid())
+  planId             String
+  plan               Plan @relation(fields: [planId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  title              String
+  referenceStartDate DateTime @db.Date
+  referenceEndDate   DateTime @db.Date
+  status             ReviewStatus @default(ABIERTA)
+  planName           String
+  planDescription    String
+  planStartDate      DateTime? @db.Date
+  planEndDate        DateTime? @db.Date
+  planStatus         PlanStatus
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  createdById        String
+  createdBy          User @relation("ReviewCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  finalizedAt        DateTime? @db.Timestamptz(3)
+  finalizedById      String?
+  finalizedBy        User? @relation("ReviewFinalizer", fields: [finalizedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  relatedReviewId    String?
+  relatedReview      PlanReview? @relation("RelatedReview", fields: [relatedReviewId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  subsequentReviews  PlanReview[] @relation("RelatedReview")
+  version            Int @default(0)
+  // SQL guard: snapshot children can only be inserted in this creation transaction.
+  snapshotTransactionId BigInt @default(dbgenerated("txid_current()"))
+  dimensions         ReviewDimension[]
+
+  @@index([planId, referenceStartDate, createdAt])
+  @@index([createdById])
+  @@index([finalizedById])
+  @@index([relatedReviewId])
+  @@map("plan_reviews")
+}
+
+model ReviewDimension {
+  id                String @id @default(cuid())
+  reviewId          String
+  review            PlanReview @relation(fields: [reviewId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sourceDimensionId String
+  name              String
+  description       String
+  position          Int
+  weightBps         Int
+  actions           ReviewAction[]
+
+  @@unique([reviewId, sourceDimensionId])
+  @@index([reviewId, position])
+  @@index([sourceDimensionId])
+  @@map("review_dimensions")
+}
+
+model ReviewAction {
+  id                String @id @default(cuid())
+  reviewDimensionId String
+  reviewDimension   ReviewDimension @relation(fields: [reviewDimensionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sourceActionId    String
+  name              String
+  description       String
+  responsibleName   String
+  startDate         DateTime @db.Date
+  endDate           DateTime @db.Date
+  actualExpense     Decimal? @db.Decimal(18, 2)
+  currency          String @db.Char(3)
+  position          Int
+  weightBps         Int
+  lastReviewedAt    DateTime? @db.Timestamptz(3)
+  lastReviewedById  String?
+  lastReviewedBy    User? @relation("ActionReviewer", fields: [lastReviewedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  version           Int @default(0)
+  milestones        ReviewMilestone[]
+
+  @@unique([reviewDimensionId, sourceActionId])
+  @@index([reviewDimensionId, position])
+  @@index([sourceActionId])
+  @@index([lastReviewedById])
+  @@map("review_actions")
+}
+
+model ReviewMilestone {
+  id                 String @id @default(cuid())
+  reviewActionId     String
+  reviewAction       ReviewAction @relation(fields: [reviewActionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sourceMilestoneId  String
+  name               String
+  position           Int
+  weightBps          Int
+  initialProgressBps Int
+  progressBps        Int
+  events             ProgressEvent[]
+
+  @@unique([reviewActionId, sourceMilestoneId])
+  @@index([reviewActionId, position])
+  @@index([sourceMilestoneId])
+  @@map("review_milestones")
+}
+
+model ProgressEvent {
+  id                String @id @default(cuid())
+  reviewMilestoneId String
+  reviewMilestone   ReviewMilestone @relation(fields: [reviewMilestoneId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actionVersion     Int
+  previousBps       Int
+  newBps            Int
+  type              ProgressEventType
+  reason            String?
+  confirmedAt       DateTime? @db.Timestamptz(3)
+  actorId           String
+  actor             User @relation("ProgressActor", fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actorRole         Role
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([reviewMilestoneId, actionVersion])
+  @@index([reviewMilestoneId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([type, createdAt])
+  @@map("progress_events")
 }

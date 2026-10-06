@@ -30,3 +30,39 @@ body {
   .button-primary { @apply rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-60; }
   .button-secondary { @apply rounded-lg border border-slate-300 bg-white px-4 py-2.5 font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-60; }
 }
+
+/* Keep semantic progress elements consistent across browser engines. */
+.dashboard-progress { appearance: none; border: 0; border-radius: 9999px; background: #e2e8f0; color: #2563eb; }
+.dashboard-progress::-webkit-progress-bar { background: #e2e8f0; border-radius: 9999px; }
+.dashboard-progress::-webkit-progress-value { background: #2563eb; border-radius: 9999px; }
+.dashboard-progress::-moz-progress-bar { background: #2563eb; border-radius: 9999px; }
+
+@layer components {
+  .button-primary, .button-secondary, .button-danger { @apply inline-flex min-h-11 items-center justify-center gap-2 text-center transition-colors; }
+  .button-danger { @apply rounded-lg border border-red-700 bg-red-700 px-4 py-2.5 font-medium text-white hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-60; }
+  .navigation-link { @apply rounded-md px-2 py-1 font-medium text-slate-800 transition-colors hover:bg-blue-50 hover:text-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600; }
+}
+.app-dialog { margin: auto; width: min(48rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #cbd5e1; border-radius: 1rem; padding: clamp(1rem, 3vw, 2rem); color: #0f172a; background: #fff; box-shadow: 0 24px 80px #0f172a40; overflow-wrap: anywhere; }
+.app-dialog::backdrop { background: #0f172a99; }
+.field { min-width: 0; max-width: 100%; }
+fieldset { min-width: 0; }
+.dashboard-reveal section,
+.dashboard-reveal article {
+  transition:
+    opacity 800ms ease-out,
+    transform 800ms ease-out;
+}
+
+.reveal-pending {
+  opacity: 0;
+  transform: translateY(70px);
+}
+
+.reveal-pending:focus-within {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-reveal section, .dashboard-reveal article { transition: none; transform: none; opacity: 1; }
+  .button-primary, .button-secondary, .button-danger, .navigation-link { transition: none; }
+}

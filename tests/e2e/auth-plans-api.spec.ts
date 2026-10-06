@@ -5,9 +5,9 @@ import { setTimeout as pause } from "node:timers/promises";
 import { readFileSync } from "node:fs";
 import { hashPassword } from "better-auth/crypto";
 import { PrismaClient } from "../../generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { databaseAdapter } from "../../models/database-adapter";
 
-const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+const db = new PrismaClient({ adapter: databaseAdapter(process.env.DATABASE_URL!) });
 const manifest = JSON.parse(readFileSync(".next/server/server-reference-manifest.json", "utf8"));
 const actionId = Object.entries(manifest.node).find(([, entry]) => (entry as { exportedName: string }).exportedName === "createPlanAction")?.[0];
 if (!actionId) throw new Error("Compila la aplicación antes de estas pruebas.");

@@ -14,7 +14,13 @@
     "db:deploy": "prisma migrate deploy",
     "db:migrate": "prisma migrate dev",
     "setup:users": "tsx scripts/setup-users.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:credentials": "node scripts/change-db-credentials.mjs",
+    "test:integrity": "node --test tests/migrations/plan-reviews.mjs",
+    "test:tracking": "vitest run --config vitest.integration.config.ts",
+    "test:tracking:http": "node tests/run-tracking-http.mjs",
+    "test:tracking:ui": "node tests/run-tracking-http.mjs tracking-ui.spec.ts",
+    "test:tracking:components": "vitest run --config vitest.ui.config.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -31,12 +37,15 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^24.19.0",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^16.3.6",
+    "jsdom": "^30.1.1",
     "prisma": "^7.10.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
